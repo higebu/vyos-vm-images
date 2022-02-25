@@ -1,0 +1,59 @@
+name: Release VyOS current vagrant boxes
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '*/15 * * * *'
+
+jobs:
+  get_version:
+    runs-on: ubuntu-latest
+    outputs:
+      latest_iso_version: ${{ steps.get_latest_iso_version.outputs.latest_iso_version }}
+      current_box_version: ${{ steps.get_current_box_version.outputs.current_box_version }}
+    steps:
+      - name: Get latest iso version
+        id: get_latest_iso_version
+        run: |
+          v=$(curl -s https://vyos.net/get/nightly-builds/ | grep -m 2 s3.amazonaws.com | grep -o -E '[0-9]{12}' | head -n 1)
+          echo "latest_iso_version: ${v:0:8}.${v:8:2}.${v:10:2}"
+          echo "::set-output name=latest_iso_version::${v:0:8}.${v:8:2}.${v:10:2}"
+      - name: Get current box version
+        id: get_current_box_version
+        run: |
+          v=$(curl -s --header "Authorization: Bearer $VAGRANT_TOKEN" https://app.vagrantup.com/api/v1/box/vyos/current | jq -r .current_version.version)
+          echo "current_box_version: ${v}"
+          echo "::set-output name=current_box_version::${v}"
+        env:
+          VAGRANT_TOKEN: ${{ secrets.vagrant_token }}
+
+  build:
+    needs: get_version
+    if: needs.get_version.outputs.latest_iso_version != needs.get_version.outputs.current_box_version
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        provider: ['libvirt', 'virtualbox']
+        box_name: ['vyos/current', 'higebu/vyos']
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          ref: actions
+      - uses: actions/setup-python@v2
+        with:
+          python-version: '3.x'
+      - run: |
+          pip3 install poetry
+          poetry install
+      - name: Install Vagrant
+        run: |
+          curl -fsSL https://apt.releases.hashicorp.com/gpg | sudo apt-key add -
+          sudo apt-add-repository "deb [arch=amd64] https://apt.releases.hashicorp.com $(lsb_release -cs) main"
+          sudo apt-get update && sudo apt-get install vagrant
+      - name: vagrant cloud auth login
+        env:
+          VAGRANT_TOKEN: ${{ secrets.vagrant_token }}
+        run: |
+          vagrant cloud auth login --token "$VAGRANT_TOKEN"
+      - run: |
+          poetry run ansible-playbook vagrant-${{ matrix.provider }}.yml -e vyos_vagrant_box_name=${{ matrix.box_name }} -e release=True
