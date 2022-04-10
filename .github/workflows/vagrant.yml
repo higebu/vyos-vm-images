@@ -27,8 +27,30 @@ jobs:
         env:
           VAGRANT_TOKEN: ${{ secrets.vagrant_token }}
 
-  build:
+  create_version:
     needs: get_version
+    if: needs.get_version.outputs.latest_iso_version != needs.get_version.outputs.current_box_version
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        box_name: ['vyos/current', 'higebu/vyos']
+    steps:
+      - name: Install Vagrant
+        run: |
+          curl -fsSL https://apt.releases.hashicorp.com/gpg | sudo apt-key add -
+          sudo apt-add-repository "deb [arch=amd64] https://apt.releases.hashicorp.com $(lsb_release -cs) main"
+          sudo apt-get update && sudo apt-get install vagrant
+      - name: vagrant cloud auth login
+        env:
+          VAGRANT_TOKEN: ${{ secrets.vagrant_token }}
+        run: |
+          vagrant cloud auth login --token "$VAGRANT_TOKEN"
+      - name: vagrant cloud version create
+        run: |
+          vagrant cloud version create ${{ matrix.box_name }} ${{ needs.get_version.outputs.latest_iso_version }}
+
+  build:
+    needs: [get_version, create_version]
     if: needs.get_version.outputs.latest_iso_version != needs.get_version.outputs.current_box_version
     runs-on: ubuntu-latest
     strategy:
