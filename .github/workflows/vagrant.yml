@@ -15,7 +15,7 @@ jobs:
       - name: Get latest iso version
         id: get_latest_iso_version
         run: |
-          v=$(curl -s https://vyos.net/get/nightly-builds/ | grep -m 2 s3.amazonaws.com | grep -o -E '[0-9]{12}' | head -n 1)
+          v=$(curl -s https://vyos.net/get/nightly-builds/ | grep -m 2 s3-us.vyos.io | grep -o -E '[0-9]{12}' | head -n 1)
           echo "latest_iso_version: ${v:0:8}.${v:8:2}.${v:10:2}"
           echo "::set-output name=latest_iso_version::${v:0:8}.${v:8:2}.${v:10:2}"
       - name: Get current box version
