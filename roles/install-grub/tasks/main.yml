@@ -63,3 +63,8 @@
       state: absent
       boot: no
   when: partition_num_efi is defined
+
+- name: Set console tag for image file name
+  set_fact:
+    console_tag: "-serial"
+  when: grub_console == "serial"

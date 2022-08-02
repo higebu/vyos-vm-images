@@ -11,6 +11,7 @@ jobs:
     strategy:
       matrix:
         cloud_init: ['true', 'false']
+        grub_console: ['kvm', 'serial']
     steps:
       - uses: actions/checkout@v2
         with:
@@ -22,7 +23,7 @@ jobs:
           pip3 install poetry
           poetry install
       - run: |
-          poetry run ansible-playbook qemu.yml -e cloud_init=${{ matrix.cloud_init}}
+          poetry run ansible-playbook qemu.yml -e cloud_init=${{ matrix.cloud_init}} -e grub_console=${{ matrix.grub_console }}
       - uses: actions/upload-artifact@v2
         with:
           name: qcow2
