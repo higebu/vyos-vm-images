@@ -24,10 +24,13 @@ jobs:
           poetry install
       - run: |
           poetry run ansible-playbook qemu.yml -e cloud_init=${{ matrix.cloud_init}} -e grub_console=${{ matrix.grub_console }}
+      - run: |
+          zstd *.qcow2
+        working-directory: ./build
       - uses: actions/upload-artifact@v2
         with:
           name: qcow2
-          path: build/*.qcow2
+          path: build/*.qcow2.zst
 
   upload:
     needs: qemu
@@ -50,4 +53,4 @@ jobs:
         with:
           path: '.'
           destination: "${{ secrets.BUCKET_NAME }}/rolling/current"
-          glob: '*.qcow2'
+          glob: '*.qcow2.zst'
