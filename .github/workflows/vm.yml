@@ -26,6 +26,11 @@ jobs:
           poetry run ansible-playbook qemu.yml -e cloud_init=${{ matrix.cloud_init}} -e grub_console=${{ matrix.grub_console }}
       - run: |
           zstd *.qcow2
+          for i in `ls *.qcow2.zst`; do
+            latest=$(echo $i | sed 's/[0-9]\{12\}/latest/')
+            echo "copy $i to $latest"
+            cp -p $i $latest
+          done
         working-directory: ./build
       - uses: actions/upload-artifact@v2
         with:
