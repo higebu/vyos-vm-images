@@ -79,4 +79,4 @@ jobs:
         run: |
           vagrant cloud auth login --token "$VAGRANT_TOKEN"
       - run: |
-          poetry run ansible-playbook vagrant-${{ matrix.provider }}.yml -e vyos_vagrant_box_name=${{ matrix.box_name }} -e release=True
+          poetry run ansible-playbook vagrant-${{ matrix.provider }}.yml -e vyos_vagrant_box_name=${{ matrix.box_name }} -e box_version=${{ needs.get_version.outputs.latest_iso_version }} -e release=True
