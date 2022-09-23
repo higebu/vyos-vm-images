@@ -13,7 +13,6 @@
     dest: /tmp
   when: stat_result.stat.exists == False
 - name: Build open-vmdk
-  become: true
   make:
     chdir: /tmp/open-vmdk-master/vmdk
   when: stat_result.stat.exists == False
