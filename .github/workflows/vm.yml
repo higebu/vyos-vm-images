@@ -24,9 +24,9 @@ jobs:
           poetry install
       - run: |
           poetry run ansible-playbook qemu.yml -e cloud_init=${{ matrix.cloud_init}} -e grub_console=${{ matrix.grub_console }}
-      - run: |
-          zstd *.qcow2
-          for i in `ls *.qcow2.zst`; do
+      - name: create latest files
+        run: |
+          for i in `ls *.qcow2`; do
             latest=$(echo $i | sed 's/[0-9]\{12\}/latest/')
             echo "copy $i to $latest"
             cp -p $i $latest
@@ -34,8 +34,8 @@ jobs:
         working-directory: ./build
       - uses: actions/upload-artifact@v2
         with:
-          name: qcow2
-          path: build/*.qcow2.zst
+          name: images
+          path: build/*.qcow2
 
   upload:
     needs: qemu
@@ -46,16 +46,15 @@ jobs:
     steps:
       - uses: actions/download-artifact@v3
         with:
-          name: qcow2
-      - id: 'auth'
-        uses: 'google-github-actions/auth@v0'
-        with:
-          workload_identity_provider: ${{ secrets.WORKLOAD_IDENTITY_PROVIDER }}
-          service_account: ${{ secrets.SERVICE_ACCOUNT }}
+          name: images
+
+      - run: aws configure set default.s3.max_concurrent_requests 3
   
-      - id: 'upload-file'
-        uses: 'google-github-actions/upload-cloud-storage@v0'
-        with:
-          path: '.'
-          destination: "${{ secrets.BUCKET_NAME }}/rolling/current"
-          glob: '*.qcow2.zst'
+      - name: upload file
+        run: aws --endpoint-url "${ENDPOINT_URL}" s3 sync . s3://${BUCKET_NAME}/rolling/current --exclude "*" --include="*.qcow2" --delete
+        env:
+          ENDPOINT_URL: ${{ secrets.ENDPOINT_URL }}
+          BUCKET_NAME: ${{ secrets.BUCKET_NAME }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: auto # avoid botocore.awsrequest.AWSRequest error
