@@ -10,7 +10,6 @@
       - gnupg
       - qemu-utils
       - python3-lxml
-      - grub-efi-amd64
       - grub-efi-amd64-bin
       - grub-common
       - isolinux
