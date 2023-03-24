@@ -13,12 +13,13 @@ jobs:
         cloud_init: ['true', 'false']
         grub_console: ['kvm', 'serial']
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           ref: actions
-      - uses: actions/setup-python@v2
+      - uses: actions/setup-python@v4
         with:
           python-version: '3.x'
+          cache: 'poetry'
       - run: |
           pip3 install poetry
           poetry install
