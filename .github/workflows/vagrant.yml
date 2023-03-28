@@ -17,13 +17,12 @@ jobs:
         run: |
           v=$(curl -s https://vyos.net/get/nightly-builds/ | grep -m 2 s3-us.vyos.io | grep -o -E '[0-9]{12}' | head -n 1)
           echo "latest_iso_version: ${v:0:8}.${v:8:2}.${v:10:2}"
-          echo "::set-output name=latest_iso_version::${v:0:8}.${v:8:2}.${v:10:2}"
+          echo "latest_iso_version=${v:0:8}.${v:8:2}.${v:10:2}" >> $GITHUB_OUTPUT
       - name: Get current box version
         id: get_current_box_version
         run: |
           v=$(curl -s --header "Authorization: Bearer $VAGRANT_TOKEN" https://app.vagrantup.com/api/v1/box/vyos/current | jq -r .current_version.version)
-          echo "current_box_version: ${v}"
-          echo "::set-output name=current_box_version::${v}"
+          echo "current_box_version=${v}" >> $GITHUB_OUTPUT
         env:
           VAGRANT_TOKEN: ${{ secrets.vagrant_token }}
 
