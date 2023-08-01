@@ -3,7 +3,6 @@ Description=LXD - agent
 Documentation=man:lxd-agent(1)
 Before=cloud-init.target cloud-init.service cloud-init-local.service
 DefaultDependencies=no
-After=vyos-router.service
 
 [Service]
 Type=notify
