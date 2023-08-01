@@ -19,6 +19,7 @@ vyos_root_fstype: ext4
 vyos_target_drive: ""
 vyos_raw_img: "{{ build_dir }}/vyos_raw_image.img"
 grub_console: "kvm"
+grub_timeout: "5"
 
 enable_dhcp: False
 enable_ssh: False
