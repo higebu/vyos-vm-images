@@ -30,6 +30,21 @@
   become: true
   command: chroot {{ vyos_install_root }} apt-get -t {{ vyos_branch | default('current') }} install -y open-vm-tools
   when: guest_agent == "vmware"
+- name: Install lxd-agent
+  become: true
+  command: chroot {{ vyos_install_root }} apt-get -t {{ vyos_branch | default('current') }} install -y lxd-agent
+  when: guest_agent == "lxd"
+- name: Install lxd-agent.service
+  become: true
+  copy:
+    src: "files/lxd-agent.service"
+    dest: "{{ vyos_install_root }}/lib/systemd/system/lxd-agent.service"
+  when: guest_agent == "lxd"
+- name: systemctl daemon-reload
+  become: true
+  ansible.builtin.systemd:
+    daemon_reload: true
+  when: guest_agent == "lxd"
 - name: apt-get clean
   become: true
   command: chroot {{ vyos_install_root }} apt-get clean

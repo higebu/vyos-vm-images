@@ -1,0 +1,57 @@
+- name: Convert raw to qcow2
+  command: qemu-img convert -f raw "{{ vyos_raw_img }}" -O qcow2 -c "{{ build_dir }}/rootfs.img"
+- name: Set LXD image.release for rolling release
+  set_fact:
+    lxd_image_release: "{{ vyos_version.split('-')[2][0:8] }}.{{ vyos_version.split('-')[2][8:10] }}.{{ vyos_version.split('-')[2][10:12] }}"
+  when:
+    - lxd_image_release is undefined
+    - vyos_version.split("-") | length == 3
+- name: Set LXD image.release for epa and rc
+  set_fact:
+    lxd_image_relase: "{{ vyos_version.split('-')[0] }}"
+  when:
+    - lxd_image_relase is undefined
+    - vyos_version.split("-") | length == 2
+- name: Set LXD image.release for LTS release
+  set_fact:
+    lxd_image_release: "{{ vyos_version }}"
+  when:
+    - lxd_image_release is undefined
+    - vyos_version.split("-") | length == 1
+- name: Set image.serial
+  set_fact:
+    lxd_image_serial: "{{ '%Y%m%d_%H%M' | strftime }}"
+  when:
+    - lxd_image_serial is undefined
+- name: gather datetime
+  setup:
+    gather_subset:
+      - "date_time"
+  when: ansible_date_time is not defined
+- name: Set image.creation_date
+  set_fact:
+    lxd_image_creation_date: "{{ ansible_date_time.epoch }}"
+  when:
+    - lxd_image_creation_date is undefined
+- name: Set image.expiry_date
+  set_fact:
+    lxd_image_expiry_date: "{{ ansible_date_time.epoch | int + 2592000 }}"
+  when:
+    - lxd_image_expiry_date is undefined
+- name: Generate metadata.yaml
+  ansible.builtin.template:
+    src: "metadata.yaml.j2"
+    dest: "{{ build_dir }}/metadata.yaml"
+    mode: '0644'
+- name: Create a LXD VM image
+  community.general.archive:
+    path:
+    - "{{ build_dir }}/metadata.yaml"
+    - "{{ build_dir }}/rootfs.img"
+    dest: "{{ build_dir }}/vyos-{{ lxd_image_release }}-x86_64-default-{{ lxd_image_serial }}.tar.xz"
+    format: xz
+- name: Set vyos_output_img
+  set_fact:
+    vyos_output_img: "{{ build_dir }}/vyos-{{ lxd_image_release }}-x86_64-default-{{ lxd_image_serial }}.tar.xz"
+  when:
+    - lxd_image_serial is undefined

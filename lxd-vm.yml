@@ -1,0 +1,46 @@
+---
+- hosts: qemu
+  gather_facts: false
+  connection: local
+  vars:
+    vyos_platform: LXD
+    guest_agent: "lxd"
+    cloud_init: "true"
+    cloud_init_ds_string: "{{ cloud_init_ds | default('NoCloud,ConfigDrive,None') }}"
+    cloud_init_ds_list: "{{ cloud_init_ds_string.split(',') }}"
+    grub_console: "serial"
+  tasks:
+    - block:
+        - include_role:
+            name: '{{ roleinputvar }}'
+          loop:
+            - install-packages
+            - download-iso
+            - mount-iso
+            - get-version
+            - create-disk
+            - setup-root-partition
+            - install-image
+            - mount-root-fs
+            - install-config
+            - install-grub
+            - install-persistence-conf
+            - install-cloud-init-wrapper
+            - install-guest-agent-wrapper
+            - install-custom-packages-wrapper
+            - fstrim
+            - unmount-pre
+            - create-pxe-archive
+            - unmount-all
+            - generate-lxd-vm-image
+            - cleanup-ending
+          loop_control:
+            loop_var: roleinputvar
+      rescue:
+        - include_role:
+            name: '{{ roleinputvar }}'
+          loop:
+            - unmount-pre
+            - unmount-all
+          loop_control:
+            loop_var: roleinputvar

@@ -1,0 +1,12 @@
+architecture: x86_64
+creation_date: {{ lxd_image_creation_date }}
+expiry_date: {{ lxd_image_expiry_date }}
+properties:
+  architecture: x86_64
+  description: VyOS {{ lxd_image_release }} x86_64 ({{ lxd_image_serial }})
+  name: vyos-{{ lxd_image_release }}-x86_64-default-{{ lxd_image_serial }}
+  os: vyos
+  release: "{{ lxd_image_release }}"
+  serial: "{{ lxd_image_serial }}"
+  variant: default
+templates:
