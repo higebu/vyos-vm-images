@@ -9,6 +9,7 @@
     cloud_init_ds_string: "{{ cloud_init_ds | default('NoCloud,ConfigDrive,None') }}"
     cloud_init_ds_list: "{{ cloud_init_ds_string.split(',') }}"
     grub_console: "serial"
+    grub_timeout: "0"
   tasks:
     - block:
         - include_role:
