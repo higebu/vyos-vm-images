@@ -9,17 +9,37 @@ jobs:
   get_version:
     runs-on: ubuntu-latest
     outputs:
-      latest_iso_version: ${{ steps.get_latest_iso_version.outputs.latest_iso_version }}
-      current_box_version: ${{ steps.get_current_box_version.outputs.current_box_version }}
+      latest_iso_version: ${{ steps.set_latest_iso_version.outputs.latest_iso_version }}
+      current_box_version: ${{ steps.set_current_box_version.outputs.current_box_version }}
+      iso_url: ${{ steps.set_iso_url.outputs.iso_url }}
     steps:
-      - name: Get latest iso version
-        id: get_latest_iso_version
+      - name: Get latest release
+        id: get_latest_release
+        uses: actions/github-script@v6
+        with:
+          result-encoding: string
+          debug: true
+          script: |
+            const result = await github.rest.repos.getLatestRelease({
+              owner: "vyos",
+              repo: "vyos-rolling-nightly-builds",
+            });
+            console.log(result);
+            return result.data.tag_name;
+      - name: Set latest iso version
+        id: set_latest_iso_version
         run: |
-          v=$(curl -s https://vyos.net/get/nightly-builds/ | grep -m 2 s3-us.vyos.io | grep -o -E '[0-9]{12}' | head -n 1)
+          v=$(echo ${{steps.get_latest_release.outputs.result}} | cut -d'-' -f3)
           echo "latest_iso_version: ${v:0:8}.${v:8:2}.${v:10:2}"
           echo "latest_iso_version=${v:0:8}.${v:8:2}.${v:10:2}" >> $GITHUB_OUTPUT
-      - name: Get current box version
-        id: get_current_box_version
+      - name: Set iso url
+        id: set_iso_url
+        run: |
+          v="${{steps.get_latest_release.outputs.result}}"
+          echo "iso_url: https://github.com/vyos/vyos-rolling-nightly-builds/releases/download/${v}/vyos-${v}-amd64.iso"
+          echo "iso_url=https://github.com/vyos/vyos-rolling-nightly-builds/releases/download/${v}/vyos-${v}-amd64.iso" >> $GITHUB_OUTPUT
+      - name: Set current box version
+        id: set_current_box_version
         run: |
           v=$(curl -s --header "Authorization: Bearer $VAGRANT_TOKEN" https://app.vagrantup.com/api/v1/box/vyos/current | jq -r .current_version.version)
           echo "current_box_version=${v}" >> $GITHUB_OUTPUT
@@ -78,4 +98,4 @@ jobs:
         run: |
           vagrant cloud auth login --token "$VAGRANT_TOKEN"
       - run: |
-          poetry run ansible-playbook vagrant-${{ matrix.provider }}.yml -e vyos_vagrant_box_name=${{ matrix.box_name }} -e box_version=${{ needs.get_version.outputs.latest_iso_version }} -e release=True
+          poetry run ansible-playbook vagrant-${{ matrix.provider }}.yml -e vyos_vagrant_box_name=${{ matrix.box_name }} -e box_version=${{ needs.get_version.outputs.latest_iso_version }} -e release=True -e vyos_iso_url=${{ needs.get_version.outputs.iso_url }}
