@@ -6,7 +6,41 @@ on:
     - cron: '0 0 * * *'
 
 jobs:
+  get_latest_release:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.get_version.outputs.version }}
+      latest_version: ${{ steps.get_latest_release.outputs.result }}
+      iso_url: ${{ steps.set_iso_url.outputs.iso_url }}
+    steps:
+      - name: Get latest release
+        id: get_latest_release
+        uses: actions/github-script@v6
+        with:
+          result-encoding: string
+          debug: true
+          script: |
+            const result = await github.rest.repos.getLatestRelease({
+              owner: "vyos",
+              repo: "vyos-rolling-nightly-builds",
+            });
+            console.log(result);
+            return result.data.tag_name;
+      - uses: actions/checkout@v3
+      - name: Get version from version.txt
+        id: get_version
+        run: echo "version=$(cat $GITHUB_WORKSPACE/version.txt)" >> $GITHUB_OUTPUT
+      - name: Set iso url
+        id: set_iso_url
+        if: ${{ steps.get_version.outputs.version != steps.get_latest_release.outputs.result }}
+        run: |
+          v="${{steps.get_latest_release.outputs.result}}"
+          echo "iso_url: https://github.com/vyos/vyos-rolling-nightly-builds/releases/download/${v}/vyos-${v}-amd64.iso"
+          echo "iso_url=https://github.com/vyos/vyos-rolling-nightly-builds/releases/download/${v}/vyos-${v}-amd64.iso" >> $GITHUB_OUTPUT
+
   qemu:
+    needs: [get_latest_release]
+    if: ${{ needs.get_latest_release.outputs.iso_url != '' }}
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -23,27 +57,69 @@ jobs:
           cache: 'poetry'
       - run: poetry install
       - run: |
-          poetry run ansible-playbook qemu.yml -e cloud_init=${{ matrix.cloud_init}} -e grub_console=${{ matrix.grub_console }}
-      - uses: actions/upload-artifact@v2
+          poetry run ansible-playbook qemu.yml -e cloud_init=${{ matrix.cloud_init}} -e grub_console=${{ matrix.grub_console }} -e vyos_iso_url=${{ needs.get_latest_release.outputs.iso_url }}
+      - uses: actions/upload-artifact@v3
         with:
           name: images
           path: build/*.qcow2
+          retention-days: 30
+          if-no-files-found: error
 
-  upload:
-    needs: qemu
+  lxd:
+    needs: [get_latest_release]
+    if: ${{ needs.get_latest_release.outputs.iso_url != '' }}
     runs-on: ubuntu-latest
-    permissions:
-      contents: 'read'
-      id-token: 'write'
     steps:
-      - uses: actions/download-artifact@v3
+      - uses: actions/checkout@v3
+        with:
+          ref: actions
+      - run: pipx install poetry
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+          cache: 'poetry'
+      - run: poetry install
+      - run: |
+          poetry run ansible-playbook lxd-vm.yml -e vyos_iso_url=${{ needs.get_latest_release.outputs.iso_url }}
+      - uses: actions/upload-artifact@v3
         with:
           name: images
+          path: build/*.tar.xz
+          retention-days: 30
+          if-no-files-found: error
+
+  release:
+    needs: [get_latest_release, qemu, lxd]
+    if: ${{ needs.get_latest_release.outputs.iso_url != '' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Update version.txt
+        run: echo ${{needs.get_latest_release.outputs.latest_version}} > $GITHUB_WORKSPACE/version.txt
+
+      - name: Create autocommit and tag
+        uses: stefanzweifel/git-auto-commit-action@v4
+        with:
+          tagging_message: ${{ needs.get_latest_release.outputs.latest_version }}
+          commit_message: ${{ needs.get_latest_release.outputs.latest_version }}
+
+      - uses: actions/download-artifact@v3
+        id: download
+        with:
+          name: images
+
+      - name: Publish release
+        uses: ncipollo/release-action@v1
+        with:
+          artifactErrorsFailBuild: true
+          artifacts: "*.tar.xz,*.qcow2"
+          name: ${{ needs.get_latest_release.outputs.latest_version }}
+          tag: ${{ needs.get_latest_release.outputs.latest_version }}
 
       - run: aws configure set default.s3.max_concurrent_requests 3
   
       - name: upload file
-        run: aws --endpoint-url "${ENDPOINT_URL}" s3 sync . s3://${BUCKET_NAME}/rolling/current --exclude "*" --include="*.qcow2"
+        run: aws --endpoint-url "${ENDPOINT_URL}" s3 sync . s3://${BUCKET_NAME}/rolling/current --exclude "*" --include="*.tar.xz" --include="*.qcow2"
         env:
           ENDPOINT_URL: ${{ secrets.ENDPOINT_URL }}
           BUCKET_NAME: ${{ secrets.BUCKET_NAME }}
