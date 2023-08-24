@@ -3,7 +3,7 @@ name: Release VyOS current vagrant boxes
 on:
   workflow_dispatch:
   schedule:
-    - cron: '0 0 * * *'
+    - cron: '30 0 * * *'
 
 jobs:
   get_version:
