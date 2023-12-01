@@ -50,14 +50,12 @@ jobs:
       - uses: actions/checkout@v3
         with:
           ref: actions
-      - run: pipx install poetry
       - uses: actions/setup-python@v4
         with:
           python-version: '3.x'
-          cache: 'poetry'
-      - run: poetry install
+      - run: pipx install --include-deps ansible
       - run: |
-          poetry run ansible-playbook qemu.yml -e cloud_init=${{ matrix.cloud_init}} -e grub_console=${{ matrix.grub_console }} -e vyos_iso_url=${{ needs.get_latest_release.outputs.iso_url }}
+          ansible-playbook qemu.yml -e cloud_init=${{ matrix.cloud_init}} -e grub_console=${{ matrix.grub_console }} -e vyos_iso_url=${{ needs.get_latest_release.outputs.iso_url }}
       - uses: actions/upload-artifact@v3
         with:
           name: images
@@ -73,14 +71,12 @@ jobs:
       - uses: actions/checkout@v3
         with:
           ref: actions
-      - run: pipx install poetry
       - uses: actions/setup-python@v4
         with:
           python-version: '3.x'
-          cache: 'poetry'
-      - run: poetry install
+      - run: pipx install --include-deps ansible
       - run: |
-          poetry run ansible-playbook lxd-vm.yml -e vyos_iso_url=${{ needs.get_latest_release.outputs.iso_url }}
+          ansible-playbook lxd-vm.yml -e vyos_iso_url=${{ needs.get_latest_release.outputs.iso_url }}
       - uses: actions/upload-artifact@v3
         with:
           name: images
