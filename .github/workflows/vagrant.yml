@@ -78,12 +78,9 @@ jobs:
         provider: ['libvirt', 'virtualbox']
         box_name: ['vyos/current', 'higebu/vyos']
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           ref: actions
-      - uses: actions/setup-python@v4
-        with:
-          python-version: '3.x'
       - run: pipx install --include-deps ansible
       - name: Install Vagrant
         run: |

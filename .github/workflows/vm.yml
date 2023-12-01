@@ -26,7 +26,7 @@ jobs:
             });
             console.log(result);
             return result.data.tag_name;
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Get version from version.txt
         id: get_version
         run: echo "version=$(cat $GITHUB_WORKSPACE/version.txt)" >> $GITHUB_OUTPUT
@@ -47,12 +47,9 @@ jobs:
         cloud_init: ['true', 'false']
         grub_console: ['kvm', 'serial']
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           ref: actions
-      - uses: actions/setup-python@v4
-        with:
-          python-version: '3.x'
       - run: pipx install --include-deps ansible
       - run: |
           ansible-playbook qemu.yml -e cloud_init=${{ matrix.cloud_init}} -e grub_console=${{ matrix.grub_console }} -e vyos_iso_url=${{ needs.get_latest_release.outputs.iso_url }}
@@ -68,12 +65,9 @@ jobs:
     if: ${{ needs.get_latest_release.outputs.iso_url != '' }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           ref: actions
-      - uses: actions/setup-python@v4
-        with:
-          python-version: '3.x'
       - run: pipx install --include-deps ansible
       - run: |
           ansible-playbook lxd-vm.yml -e vyos_iso_url=${{ needs.get_latest_release.outputs.iso_url }}
@@ -89,7 +83,7 @@ jobs:
     if: ${{ needs.get_latest_release.outputs.iso_url != '' }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Update version.txt
         run: echo ${{needs.get_latest_release.outputs.latest_version}} > $GITHUB_WORKSPACE/version.txt
 
