@@ -28,4 +28,3 @@
     - unmount-all
     - vagrant-virtualbox-box
     - cleanup-ending
-    - release-vagrant-box
