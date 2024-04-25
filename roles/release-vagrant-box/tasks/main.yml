@@ -2,7 +2,7 @@
   when: release
   block:
     - name: Check Vagrant Cloud login
-      become: no
+      become: false
       command: "vagrant cloud auth login --check"
     
     - name: Set box version for rolling release
@@ -26,6 +26,12 @@
         - box_version is undefined
         - vyos_version.split("-") | length == 1
     
-    - name: Publish the Vagrant box
-      become: no
-      command: "vagrant cloud publish {{ vyos_vagrant_box_name }} {{ box_version }} {{ vagrant_provider }} {{ vyos_output_img }} --version-description \"VyOS {{ vyos_version }}\" --release --force"
+    - name: Create the Vagrant box provider
+      become: false
+      ignore_errors: true
+      command: "vagrant cloud provider create {{ vyos_vagrant_box_name }} {{ vagrant_provider }} {{ box_version }} --no-tty"
+
+    - name: Upload the Vagrant box
+      become: false
+      ignore_errors: true
+      command: "vagrant cloud provider upload {{ vyos_vagrant_box_name }} {{ vagrant_provider }} {{ box_version }} {{ vyos_output_img }} --no-tty"
