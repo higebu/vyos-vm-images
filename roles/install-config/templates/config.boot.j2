@@ -52,6 +52,7 @@ interfaces {
 {% if enable_ssh %}
 service {
     ssh {
+        disable-host-validation
     }
 }
 {% endif %}
